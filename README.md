@@ -65,9 +65,6 @@ The CHIP-8 keypad is mapped to your keyboard as follows:
  | A | 0 | B | F |    | Z | X | C | V |
 ```
 
-## License
-This project is licensed under the MIT License.
-
 ## Contributing
 Pull requests are welcome! If you find any issues or have suggestions, please open an issue on GitHub.
 
