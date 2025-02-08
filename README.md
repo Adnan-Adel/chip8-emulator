@@ -18,7 +18,8 @@ This is a CHIP-8 emulator written in C++ using SDL2 for rendering and input hand
 ## Installation
 ### 1. Clone the repository
 ```sh
-git clone https://github.com/your-username/chip8-emulator.git
+git clone https://github.com/Adnan-Adel/chip8-emulator.git 
+
 cd chip8-emulator
 ```
 
