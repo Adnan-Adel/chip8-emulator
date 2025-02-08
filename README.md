@@ -72,6 +72,6 @@ This project is licensed under the MIT License.
 Pull requests are welcome! If you find any issues or have suggestions, please open an issue on GitHub.
 
 ## Author
-[Your Name](https://github.com/your-username)
+[Adnan Adel](https://github.com/Adnan-Adel/chip8-emulator.git)
 
 
