@@ -56,6 +56,7 @@ public:
   EmulatorState get_state() const {return state; }
   void emulate_instruction(const Config &config);
   void print_debug_info() const;
+  void update_timers();
   const std::array<bool, SCREEN_WIDTH * SCREEN_HEIGHT>& get_display() const {
     return display;
   }

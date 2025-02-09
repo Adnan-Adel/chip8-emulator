@@ -700,3 +700,16 @@ void Chip8::emulate_instruction(const Config &config) {
     break;    // Unimplemented or invalid opcode
   }
 }
+
+// Update CHIP8 delay and sound timers
+void Chip8::update_timers() {
+  if(delay_timer > 0) {
+    delay_timer--;
+  }
+  if(sound_timer > 0) {
+    // TODO play sound
+  }
+  else {
+    // TODO stop playing sound
+  }
+}

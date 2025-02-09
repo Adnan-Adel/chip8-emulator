@@ -10,7 +10,8 @@ bool set_config_from_args(Config *config, int argc, char **argv) {
     .fg_color      = 0xFFFFFFFF, // WHITE
     .bg_color      = 0x000000FF, // BLACK
     .scale_factor  = 20,         // Scale multiplier
-    .pixel_outlines = true
+    .pixel_outlines = true,
+    .insts_per_seconds = 500     // Number of instructions to emulate in 1 sec 
   };
 
   // Override defaults from passed in arguments (TODO: Parse actual arguments)

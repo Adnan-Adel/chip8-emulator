@@ -10,6 +10,7 @@ struct Config {
   uint32_t bg_color;            // background color RGBA8888
   uint32_t scale_factor;        // amout to scale a chip-8 pixel by
   bool pixel_outlines;
+  uint32_t insts_per_seconds;   // CHIP8 CPU clock rate
 };
 
 // Function to set up initial emulator configurations from passed arguments
