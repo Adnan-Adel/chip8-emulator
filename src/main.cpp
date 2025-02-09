@@ -1,6 +1,7 @@
 #include <SDL2/SDL_timer.h>
 #include <cstdio>
 #include <cstdlib>
+#include <ctime>
 #include <iostream>
 #include "../include/chip8.h"
 #include "../include/display.h"
@@ -27,8 +28,10 @@ int main(int argc, char **argv) {
   Chip8 chip8(rom_name);
 
   display.clear_screen(&config);
-  display.update_screen(&config, chip8);
   
+  // Seed the random number generator
+  srand(time(nullptr));
+
   // main emulator loop
   while (chip8.get_state() != EmulatorState::QUIT) {
     // handle user input
