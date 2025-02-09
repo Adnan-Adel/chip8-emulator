@@ -2,10 +2,12 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_keycode.h>
 #include <SDL2/SDL_log.h>
+#include <algorithm>
 #include <cstddef>
 #include <cstdio>
 #include <cstdint>
 #include <cstring>
+#include <iostream>
 #include <string>
 #include <fstream>
 
@@ -30,68 +32,8 @@ constexpr std::array<uint8_t, 80> FONTSET = {
 
 
 Chip8::Chip8(const std::string &rom_path) : stack_ptr(stack.data()), rom_name(rom_path) {
-  
   load_fontset();
   load_rom(rom_path);
-
-/*
-  const uint32_t entry_point = 0x200;       // chip8 roms will be loaded to 0x200
-  const uint8_t font[] = {
-    0xF0, 0x90, 0x90, 0x90, 0xF0,           // 0
-    0x20, 0x60, 0x20, 0x20, 0x70,           // 1
-    0xF0, 0x10, 0xF0, 0x80, 0xF0,           // 2
-    0xF0, 0x10, 0xF0, 0x10, 0xF0,           // 3
-    0x90, 0x90, 0xF0, 0x10, 0x10,           // 4
-    0xF0, 0x80, 0xF0, 0x10, 0xF0,           // 5
-    0xF0, 0x80, 0xF0, 0x90, 0xF0,           // 6
-    0xF0, 0x10, 0x20, 0x40, 0x40,           // 7
-    0xF0, 0x90, 0xF0, 0x90, 0xF0,           // 8
-    0xF0, 0x90, 0xF0, 0x10, 0xF0,           // 9
-    0xF0, 0x90, 0xF0, 0x90, 0x90,           // A
-    0xE0, 0x90, 0xE0, 0x90, 0xE0,           // B
-    0xF0, 0x80, 0x80, 0x80, 0xF0,           // C
-    0xE0, 0x90, 0x90, 0x90, 0xE0,           // D
-    0xF0, 0x80, 0xF0, 0x80, 0xF0,           // E
-    0xF0, 0x80, 0xF0, 0x80, 0x80,           // F
-  };
-
-  // load font
-  memcpy(&ram[0], font, sizeof(font));
-
-  // open ROM file
-  FILE *rom = fopen(rom_name, "rb");
-  if(!rom) {
-    SDL_Log("ROM file %s is invalid or does not exist\n", rom_name);
-    return;
-  }
-  
-  // get rom size
-  fseek(rom, 0, SEEK_END);
-  const size_t rom_size = ftell(rom);
-  const size_t max_size = sizeof ram - entry_point;
-  rewind(rom);
-
-  if(rom_size > max_size) {
-    SDL_Log("ROM file %s is too big! Rom size: %zu, Max size allowed: %zu\n",
-             rom_name, rom_size, max_size);
-    return;
-  }
-  
-  // load ROM
-  if(fread(&ram[entry_point], rom_size, 1, rom) != 1){
-    SDL_Log("Couldn't read ROM file %s into CHIP8 memory\n", rom_name);
-    return;
-  }
-
-
-  fclose(rom);
-
-  // set chip8 machine defaults
-  state = EmulatorState::RUNNING;           // default machine state
-  PC = entry_point;                         // start program counter at ROM entry point
-  Chip8::rom_name = rom_name;
-  stack_ptr = &stack[0];
-*/
 }
 
 void Chip8::load_fontset() {
@@ -160,11 +102,6 @@ void Chip8::handle_input() {
     }
   }
 }
-/*
-EmulatorState Chip8::get_state() {
-  return state;
-}
-*/
 #ifdef DEBUG
 void Chip8::print_debug_info() const {
   printf("Address: 0x%04X, Opcode: 0x%04X, Desc: ",
@@ -194,6 +131,24 @@ void Chip8::print_debug_info() const {
       // 0x2NNN: Call subroutine at NNN
     break;
     
+    case 0x03:
+      // 0x3XNN: check if VX == NN, if so, skip the next instruction.
+      printf("check if v%x (0x%02x) == nn (0x%02x), skip next instruction if true\n",
+             inst.X, V[inst.X], inst.NN);
+    break;
+    
+    case 0x04:
+      // 0x4XNN: check if VX != NN, if so, skip the next instruction.
+      printf("Check if V%X (0x%02X) != NN (0x%02X), skip next instruction if true\n",
+             inst.X, V[inst.X], inst.NN);
+    break;
+    
+    case 0x05:
+      // 0x5XY0: Check if VX == VY, if so, skip the next instruction
+      printf("check if v%x (0x%02x) == V%x (0x%02x), skip next instruction if true\n",
+             inst.X, V[inst.Y], inst.Y, V[inst.Y]);
+    break;
+    
     case 0x06:
       // 0x6XNN: Set register VX to NN
       printf("Set register V%X to NN (0x%02X)\n",
@@ -206,11 +161,101 @@ void Chip8::print_debug_info() const {
               inst.X, V[inst.X], inst.NN,
               V[inst.X] + inst.NN);
     break;
+    
+    case 0x08:
+      switch(inst.N) {
+        case 0:
+          // 0x8XY0: Set register VX = VY
+          printf("Set register V%X = V%X (0x%02X)\n",
+                  inst.X, inst.Y, V[inst.Y]);
+        break;
+
+        case 1:
+          // 0x8XY1: Set register VX |= VY
+      printf("Set register V%X (0x%02X) |= V%X (0x%02X). Result: 0x%02X\n",
+              inst.X, V[inst.X],
+              inst.Y, V[inst.Y],
+              V[inst.X] | V[inst.Y]);
+        break;
+        
+        case 2:
+          // 0x8XY2: Set register VX &= VY
+      printf("Set register V%X (0x%02X) &= V%X (0x%02X). Result: 0x%02X\n",
+              inst.X, V[inst.X],
+              inst.Y, V[inst.Y],
+              V[inst.X] & V[inst.Y]);
+        break;
+
+        case 3:
+          // 0x8XY3: Set register VX ^= VY
+      printf("Set register V%X (0x%02X) ^= V%X (0x%02X). Result: 0x%02X\n",
+              inst.X, V[inst.X],
+              inst.Y, V[inst.Y],
+              V[inst.X] ^ V[inst.Y]);
+        break;
+
+        case 4:
+          // 0x8XY4: Set register VX += VY, set VF to 1 if carry
+      printf("Set register V%X (0x%02X) += V%X (0x%02X). VF = 1 if carry, Result: 0x%02X, VF = %X\n",
+              inst.X, V[inst.X],
+              inst.Y, V[inst.Y],
+              V[inst.X] + V[inst.Y],
+              ((uint16_t)(V[inst.X] + V[inst.Y]) > 255));
+        break;
+
+        case 5:
+          // 0x8XY5: Set register VX -= VY, Set VF to 1 if ther is not a borrow
+      printf("Set register V%X (0x%02X) -= V%X (0x%02X). VF = 1 if no borrow, Result: 0x%02X, VF = %X\n",
+              inst.X, V[inst.X],
+              inst.Y, V[inst.Y],
+              V[inst.X] - V[inst.Y],
+              (V[inst.Y] <= V[inst.X]));
+        break;
+
+        case 6:
+          // 0x8XY6: Set register VX >>= 1, store shifted off bit in VF.
+      printf("Set register V%X (0x%02X) >>= 1. VF = 1 shifted off bit (%X), Result: 0x%02X\n",
+              inst.X, V[inst.X],
+              V[inst.X] & 1,
+              V[inst.X] >> 1);
+        break;
+
+        case 7:
+          // 0x8XY7: Set register VX = VY - VX, Set VF to 1 if ther is not a borrow
+      printf("Set register V%X = V%X (0x%02X) - V%X (0x%02X). VF = 1 if no borrow, Result: 0x%02X, VF = %X\n",
+              inst.X,
+              inst.Y, V[inst.Y],
+              inst.X, V[inst.X],
+              V[inst.Y] - V[inst.X],
+              (V[inst.X] <= V[inst.Y]));
+        break;
+
+        case 0xE:
+          // 0x8XY6: Set register VX <<= 1, store shifted off bit in VF.
+      printf("Set register V%X (0x%02X) <<= 1. VF = 1 shifted off bit (%X), Result: 0x%02X\n",
+              inst.X, V[inst.X],
+              (V[inst.X] & 0x80) >> 7,
+              V[inst.X] << 1);
+        break;
+      }
+    break;
+    
+    case 0x09:
+      // 0x9XY0: Check if VX != VY, skip next instruction if so
+      printf("check if v%x (0x%02x) != V%x (0x%02x), skip next instruction if true\n",
+             inst.X, V[inst.Y], inst.Y, V[inst.Y]);
+    break;
 
     case 0x0A:
       // 0xANNN: Set index register I to NNN
       printf("Set I to NNN (0x%04X)\n",
               inst.NNN);
+    break;
+    
+    case 0x0B:
+      // 0xBNNN: Jump to address NNN + V0
+      printf("Set PC to NNN (0x%04X) + V0 (0x%02X). Result: PC = 0x%04X\n",
+              inst.NNN, V[0], inst.NNN + V[0]);
     break;
 
     case 0x0D:
@@ -255,12 +300,17 @@ void Chip8::emulate_instruction(const Config &config) {
     case 0x00:
       if(inst.NN == 0xE0) {
         // 0x00E0: Clear the screen
-        memset(&display[0], 0, sizeof display);
+        //memset(&display[0], 0, sizeof display);
+        std::fill(display.begin(), display.end(), false);
       }
       else if(inst.NN == 0xEE) {
         // 0x00EE: Return from a subroutine
         // set program counter to last address on subroutine stack
         PC = *--stack_ptr;
+      }
+      else {
+        // Unimplemented / invalid opcode
+        // maybe 0xNNN for calling machine code routine for RCA1802
       }
     break;
     
@@ -275,6 +325,25 @@ void Chip8::emulate_instruction(const Config &config) {
       PC = inst.NNN;      // set program counter to subroutine address
     break;
 
+    case 0x03:
+      // 0x3XNN: check if VX == NN, if so, skip the next instruction.
+      if(V[inst.X] == inst.NN)
+        PC += 2;          // skip next opcode / instruction
+    break;
+    
+    case 0x04:
+      // 0x4XNN: check if VX != NN, if so, skip the next instruction.
+      if(V[inst.X] != inst.NN)
+        PC += 2;          // skip next opcode / instruction
+    break;
+
+    case 0x05:
+      // 0x5XY0: Check if VX == VY, if so, skip the next instruction
+      if(inst.N != 0) break;     // wrong opcoed (not implemented)
+      if(V[inst.X] == V[inst.Y])
+        PC += 2;          // skip next opcode / instruction
+    break;
+
     case 0x06:
       // 0x6XNN: Set register VX to NN
       V[inst.X] = inst.NN;
@@ -285,9 +354,79 @@ void Chip8::emulate_instruction(const Config &config) {
       V[inst.X] += inst.NN;  
     break;
 
+    case 0x08:
+      switch(inst.N) {
+        case 0:
+          // 0x8XY0: Set register VX = VY
+          V[inst.X] = V[inst.Y];
+        break;
+
+        case 1:
+          // 0x8XY1: Set register VX |= VY
+          V[inst.X] |= V[inst.Y];
+        break;
+        
+        case 2:
+          // 0x8XY2: Set register VX &= VY
+          V[inst.X] &= V[inst.Y];
+        break;
+
+        case 3:
+          // 0x8XY3: Set register VX ^= VY
+          V[inst.X] ^= V[inst.Y];
+        break;
+
+        case 4:
+          // 0x8XY4: Set register VX += VY, set VF to 1 if carry
+          if((uint16_t)(V[inst.X] + V[inst.Y]) > 255)
+            V[0xF] = 1;
+
+          V[inst.X] += V[inst.Y];
+
+        break;
+
+        case 5:
+          // 0x8XY5: Set register VX -= VY, Set VF to 1 if ther is not a borrow
+          if(V[inst.Y] <= V[inst.X])
+            V[0xF] = 1;
+          V[inst.X] -= V[inst.Y];
+        break;
+
+        case 6:
+          // 0x8XY6: Set register VX >>= 1, store shifted off bit in VF.
+          V[0xF] = V[inst.X] & 1;
+          V[inst.X] >>= 1;
+        break;
+
+        case 7:
+          // 0x8XY7: Set register VX = VY - VX, Set VF to 1 if ther is not a borrow
+          if(V[inst.X] <= V[inst.Y])
+            V[0xF] = 1;
+          V[inst.X] = V[inst.Y] - V[inst.X];
+        break;
+
+        case 0xE:
+          // 0x8XY6: Set register VX <<= 1, store shifted off bit in VF.
+          V[0xF] = (V[inst.X] & 0x80) >> 7;
+          V[inst.X] <<= 1;
+        break;
+      }
+    break;
+
+    case 0x09:
+      // 0x9XY0: Check if VX != VY, skip next instruction if so
+      if(V[inst.X] != V[inst.Y])
+        PC += 2;
+    break;
+
     case 0x0A:
       // 0xANNN: Set index register I to NNN
       I = inst.NNN;
+    break;
+
+    case 0x0B:
+      // 0xBNNN: Jump to address NNN + V0
+      PC = inst.NNN + V[0];
     break;
 
     case 0x0D: {
@@ -332,6 +471,6 @@ void Chip8::emulate_instruction(const Config &config) {
     }
 
     default:
-      break;    // Unimplemented or invalid opcode
+    break;    // Unimplemented or invalid opcode
   }
 }
