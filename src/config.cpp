@@ -11,7 +11,10 @@ bool set_config_from_args(Config *config, int argc, char **argv) {
     .bg_color      = 0x000000FF, // BLACK
     .scale_factor  = 20,         // Scale multiplier
     .pixel_outlines = true,
-    .insts_per_seconds = 500     // Number of instructions to emulate in 1 sec 
+    .insts_per_seconds = 700,     // Number of instructions to emulate in 1 sec 
+    .square_wave_freq = 440,      // 440hz for middle A
+    .audio_sample_rate = 44100,   // CD quality, 44100 hz
+    .volume = 3000,               
   };
 
   // Override defaults from passed in arguments (TODO: Parse actual arguments)

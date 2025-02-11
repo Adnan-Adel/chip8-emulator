@@ -24,9 +24,10 @@ int main(int argc, char **argv) {
   }
 
   Display display(&config);
+  Audio audio(config);
 
   const char *rom_name = argv[1];
-  Chip8 chip8(rom_name);
+  Chip8 chip8(rom_name, &audio);
 
   display.clear_screen(&config);
   
@@ -52,7 +53,7 @@ int main(int argc, char **argv) {
     const uint64_t end_frame_time = SDL_GetPerformanceCounter();
 
     // delay for approximately 60hz/60fps (16.67ms) or actual time
-    const double time_elapsed = ((double)(end_frame_time - start_frame_time) / 1000) / SDL_GetPerformanceFrequency();
+    const double time_elapsed = ((double)(end_frame_time - start_frame_time) * 1000) / SDL_GetPerformanceFrequency();
     
     // SDL_Delay(16 - actual_time_elapsed);
     SDL_Delay(16.67f > time_elapsed ? 16.67f - time_elapsed : 0);

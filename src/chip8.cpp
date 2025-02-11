@@ -1,5 +1,6 @@
 #include "../include/chip8.h"
 #include <SDL2/SDL.h>
+#include <SDL2/SDL_audio.h>
 #include <SDL2/SDL_keycode.h>
 #include <SDL2/SDL_log.h>
 #include <algorithm>
@@ -31,7 +32,10 @@ constexpr std::array<uint8_t, 80> FONTSET = {
 };
 
 
-Chip8::Chip8(const std::string &rom_path) : stack_ptr(stack.data()), rom_name(rom_path) {
+Chip8::Chip8(const std::string &rom_path, Audio *audio_ref) : stack_ptr(stack.data()),
+  rom_name(rom_path),
+  audio(audio_ref)
+{
   load_fontset();
   load_rom(rom_path);
 }
@@ -707,9 +711,10 @@ void Chip8::update_timers() {
     delay_timer--;
   }
   if(sound_timer > 0) {
-    // TODO play sound
+    sound_timer--;
+    audio->play();    // play sound
   }
   else {
-    // TODO stop playing sound
+    audio->stop();    // pause sound
   }
 }

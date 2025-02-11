@@ -1,6 +1,7 @@
 #ifndef CHIP8_H__
 #define CHIP8_H__
 
+#include "audio.h"
 #include "config.h"
 #include <array>
 #include <cstddef>
@@ -45,11 +46,13 @@ private:
   std::string rom_name;           // currently running ROM
   Instruction inst;               // currently executing instructiom
 
+  Audio *audio;
+
   void load_rom(const std::string &rom_path);
   void load_fontset();
 
 public:
-  explicit Chip8(const std::string &rom_path);
+  explicit Chip8(const std::string &rom_path, Audio *audio_ref);
 
   void run();
   void handle_input();
