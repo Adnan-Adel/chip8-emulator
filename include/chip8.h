@@ -57,14 +57,17 @@ public:
   explicit Chip8(const std::string &rom_path, Audio *audio_ref);
 
   void run();
-  void handle_input();
+  void handle_input(Config &config);
   EmulatorState get_state() const {return state; }
   void emulate_instruction(const Config &config);
   void print_debug_info() const;
   void update_timers();
+  void reset();
+  
   const std::array<bool, SCREEN_WIDTH * SCREEN_HEIGHT>& get_display() const {
     return display;
   }
+
 
   bool get_draw_flag() const { return draw; }
   void set_draw_flag(bool value) { draw = value; }

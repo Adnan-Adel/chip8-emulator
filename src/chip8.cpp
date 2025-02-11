@@ -32,7 +32,8 @@ constexpr std::array<uint8_t, 80> FONTSET = {
 };
 
 
-Chip8::Chip8(const std::string &rom_path, Audio *audio_ref) : stack_ptr(stack.data()),
+Chip8::Chip8(const std::string &rom_path, Audio *audio_ref) : 
+  stack_ptr(stack.data()),
   rom_name(rom_path),
   audio(audio_ref)
 {
@@ -68,14 +69,13 @@ void Chip8::run() {
   // CHIP-8 execution loop (To be implemented later)
 }
 
-void Chip8::handle_input() {
+void Chip8::handle_input(Config &config) {
   SDL_Event event;
   while(SDL_PollEvent(&event)) {
     switch (event.type) {
       case SDL_QUIT:
         // exit window; end program
         state = QUIT;
-        return ;
       break;
 
       case SDL_KEYDOWN:
@@ -83,7 +83,6 @@ void Chip8::handle_input() {
           case SDLK_ESCAPE:
             // escape key; exit window & end program
             state = QUIT;
-            return;
           break;
 
           case SDLK_SPACE:
@@ -97,6 +96,35 @@ void Chip8::handle_input() {
               std::cout << "========= RUNNING =========" << "\n";
             }
             return;
+          break;
+
+          case SDLK_EQUALS:
+            // '=': reset CHIP8 machine for current ROM
+            reset();
+          break;
+
+          case SDLK_j:
+            // 'j': Decrease color lerp rate
+            if(config.color_lerp_rate > 0.1)
+              config.color_lerp_rate -= 0.1;
+          break;
+          
+          case SDLK_k:
+            // 'k': Increase color lerp rate
+            if(config.color_lerp_rate < 1.0)
+              config.color_lerp_rate += 0.1;
+          break;
+          
+          case SDLK_o:
+            // 'o': Decrease volume
+            if(config.volume > 0)
+              config.volume -= 500;
+          break;
+          
+          case SDLK_p:
+            // 'p': Increase volume
+            if(config.volume < INT16_MAX)
+              config.volume += 500;
           break;
           
           // Map qwerty keys to CHIP8 keypad
@@ -720,4 +748,28 @@ void Chip8::update_timers() {
   else {
     audio->stop();    // pause sound
   }
+}
+
+void Chip8::reset() {
+  // Reset RAM, display, and stack using std::fill
+  ram.fill(0);
+  display.fill(false);
+  stack.fill(0);
+  keypad.fill(false);
+  V.fill(0);
+
+  // Reset CPU registers and state
+  I = 0;
+  PC = ROM_START;
+  stack_ptr = &stack[0]; // Set stack_ptr to point to the start of stack
+  delay_timer = 0;
+  sound_timer = 0;
+  draw = true;  // Mark screen for redraw
+
+  // Reload ROM if it was previously loaded
+  if(!rom_name.empty()) {
+    load_rom(rom_name);
+  }
+
+  std::cout << "========= CHIP-8 RESET =========" << std::endl;
 }

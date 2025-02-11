@@ -14,6 +14,7 @@ struct Config {
   uint32_t square_wave_freq;    // Frequency of square wave sound
   uint32_t audio_sample_rate;
   int16_t volume;               // How loud or not is the sound 
+  float color_lerp_rate;              // Amount to lerp colors by
 };
  
 // Function to set up initial emulator configurations from passed arguments

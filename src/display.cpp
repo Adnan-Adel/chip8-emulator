@@ -32,6 +32,9 @@ Display::Display(Config *conf) {
     SDL_Quit();
     return;
   }
+
+  // Initialize pixel colors with the background color
+  pixel_color.fill(conf->bg_color);
 }
 
 Display::~Display() {
@@ -63,15 +66,15 @@ void Display::update_screen(const Config *config, const Chip8 &chip8) {
   const auto& display = chip8.get_display(); 
   
   // grab color values to draw
-  const uint8_t fg_r = (uint8_t)(config->fg_color >> 24) & 0xFF;
-  const uint8_t fg_g = (uint8_t)(config->fg_color >> 16) & 0xFF;
-  const uint8_t fg_b = (uint8_t)(config->fg_color >> 8)  & 0xFF;
-  const uint8_t fg_a = (uint8_t)(config->fg_color >> 0)  & 0xFF;
-   
-  const uint8_t bg_r = (uint8_t)(config->bg_color >> 24) & 0xFF;
-  const uint8_t bg_g = (uint8_t)(config->bg_color >> 16) & 0xFF;
-  const uint8_t bg_b = (uint8_t)(config->bg_color >> 8)  & 0xFF;
-  const uint8_t bg_a = (uint8_t)(config->bg_color >> 0)  & 0xFF;
+  // const uint8_t fg_r = (uint8_t)(config->fg_color >> 24) & 0xFF;
+  // const uint8_t fg_g = (uint8_t)(config->fg_color >> 16) & 0xFF;
+  // const uint8_t fg_b = (uint8_t)(config->fg_color >> 8)  & 0xFF;
+  // const uint8_t fg_a = (uint8_t)(config->fg_color >> 0)  & 0xFF;
+  //  
+   const uint8_t bg_r = (uint8_t)(config->bg_color >> 24) & 0xFF;
+   const uint8_t bg_g = (uint8_t)(config->bg_color >> 16) & 0xFF;
+   const uint8_t bg_b = (uint8_t)(config->bg_color >> 8)  & 0xFF;
+   const uint8_t bg_a = (uint8_t)(config->bg_color >> 0)  & 0xFF;
   
   // loop through display pixels, draw rectangle per pixel to the SDL window
   for(size_t i = 0; i < sizeof display; i++) {
@@ -81,7 +84,17 @@ void Display::update_screen(const Config *config, const Chip8 &chip8) {
 
     if(display[i]) {
       // pixel is on, draw foreground color
-      SDL_SetRenderDrawColor(renderer, fg_r, fg_g, fg_b, fg_a);
+      if(pixel_color[i] != config->fg_color) {
+        // lerp towards foreground color
+        pixel_color[i] = color_lerp(pixel_color[i], config->fg_color, config->color_lerp_rate);
+      }
+      
+      const uint8_t r = (uint8_t)(pixel_color[i] >> 24) & 0xFF;
+      const uint8_t g = (uint8_t)(pixel_color[i] >> 16) & 0xFF;
+      const uint8_t b = (uint8_t)(pixel_color[i] >> 8)  & 0xFF;
+      const uint8_t a = (uint8_t)(pixel_color[i] >> 0)  & 0xFF;
+
+      SDL_SetRenderDrawColor(renderer, r, g, b, a);
       SDL_RenderFillRect(renderer, &rect);
       
       // if user requested drawing pixel outlines, draw those here
@@ -92,10 +105,40 @@ void Display::update_screen(const Config *config, const Chip8 &chip8) {
     }
     else {
       // pixel is off, draw background color
-      SDL_SetRenderDrawColor(renderer, bg_r, bg_g, bg_b, bg_a);
+      if(pixel_color[i] != config->bg_color) {
+        // lerp towards background color
+        pixel_color[i] = color_lerp(pixel_color[i], config->bg_color, config->color_lerp_rate);
+      }
+      
+      const uint8_t r = (uint8_t)(pixel_color[i] >> 24) & 0xFF;
+      const uint8_t g = (uint8_t)(pixel_color[i] >> 16) & 0xFF;
+      const uint8_t b = (uint8_t)(pixel_color[i] >> 8)  & 0xFF;
+      const uint8_t a = (uint8_t)(pixel_color[i] >> 0)  & 0xFF;
+
+      SDL_SetRenderDrawColor(renderer, r, g, b, a);
       SDL_RenderFillRect(renderer, &rect);
     }
   }
 
   SDL_RenderPresent(renderer);
 }
+
+uint32_t Display::color_lerp(const uint32_t start_color, const uint32_t end_color, const float t) {
+  const uint8_t s_r = (start_color >> 24) & 0xFF;
+  const uint8_t s_g = (start_color >> 16) & 0xFF;
+  const uint8_t s_b = (start_color >>  8) & 0xFF;
+  const uint8_t s_a = (start_color >>  0) & 0xFF;
+
+  const uint8_t e_r = (end_color >> 24) & 0xFF;
+  const uint8_t e_g = (end_color >> 16) & 0xFF;
+  const uint8_t e_b = (end_color >>  8) & 0xFF;
+  const uint8_t e_a = (end_color >>  0) & 0xFF;
+  
+  const uint8_t ret_r = ((1 - t) * s_r) + (t * e_r);
+  const uint8_t ret_g = ((1 - t) * s_g) + (t * e_g);
+  const uint8_t ret_b = ((1 - t) * s_b) + (t * e_b);
+  const uint8_t ret_a = ((1 - t) * s_a) + (t * e_a);
+
+  return (ret_r << 24) | (ret_g << 16) | (ret_b << 8) | ret_a;
+}
+

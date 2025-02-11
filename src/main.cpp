@@ -37,7 +37,7 @@ int main(int argc, char **argv) {
   // main emulator loop
   while (chip8.get_state() != EmulatorState::QUIT) {
     // handle user input
-    chip8.handle_input();
+    chip8.handle_input(config);
     
     if(chip8.get_state() == PAUSED)
       continue;
