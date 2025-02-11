@@ -59,7 +59,12 @@ int main(int argc, char **argv) {
     SDL_Delay(16.67f > time_elapsed ? 16.67f - time_elapsed : 0);
 
     // update window with changes every 60hz
-    display.update_screen(&config, chip8);
+    if(chip8.get_draw_flag()) {
+      display.update_screen(&config, chip8);
+      chip8.set_draw_flag(false);
+    }
+
+    // update delay & sound timers
     chip8.update_timers();
 
     // update delay & sound timers every 60hz

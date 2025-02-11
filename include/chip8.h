@@ -45,6 +45,8 @@ private:
 
   std::string rom_name;           // currently running ROM
   Instruction inst;               // currently executing instructiom
+  
+  bool draw;                      // update the screen flag
 
   Audio *audio;
 
@@ -63,6 +65,9 @@ public:
   const std::array<bool, SCREEN_WIDTH * SCREEN_HEIGHT>& get_display() const {
     return display;
   }
+
+  bool get_draw_flag() const { return draw; }
+  void set_draw_flag(bool value) { draw = value; }
 };
 
 

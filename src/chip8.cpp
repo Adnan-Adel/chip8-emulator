@@ -185,6 +185,8 @@ void Chip8::print_debug_info() const {
 
     case 0x02:
       // 0x2NNN: Call subroutine at NNN
+      printf("Call subroutine at NNN (0x%04X)\n",
+              inst.NNN);
     break;
     
     case 0x03:
@@ -440,8 +442,8 @@ void Chip8::emulate_instruction(const Config &config) {
     case 0x00:
       if(inst.NN == 0xE0) {
         // 0x00E0: Clear the screen
-        //memset(&display[0], 0, sizeof display);
         std::fill(display.begin(), display.end(), false);
+        set_draw_flag(true);
       }
       else if(inst.NN == 0xEE) {
         // 0x00EE: Return from a subroutine
@@ -607,7 +609,8 @@ void Chip8::emulate_instruction(const Config &config) {
         if(++Y_coord >= config.window_height) 
           break;
       }
-
+    
+    set_draw_flag(true);
     break;
     }
 

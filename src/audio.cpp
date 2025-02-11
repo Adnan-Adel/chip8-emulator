@@ -12,7 +12,7 @@ Audio::Audio(Config &config) {
   want.freq = 44100;         // CD-quality audio (44.1 kHz)
   want.format = AUDIO_S16LSB; // 16-bit signed samples, little-endian
   want.channels = 1;         // Mono
-  want.samples = 4096;
+  want.samples = 512;
   want.callback = MyAudioCallback;
   want.userdata = &config;   // Can pass an object reference later
   
