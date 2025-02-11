@@ -45,13 +45,6 @@ To clean build files:
 make clean
 ```
 
-#### Using `CMake` (Optional)
-```sh
-mkdir build && cd build
-cmake ..
-make
-```
-
 ## Usage
 Run the emulator with a CHIP-8 ROM:
 ```sh
@@ -66,8 +59,8 @@ Or in debug mode:
 | Option                  | Description                        |
 |-------------------------|----------------------------------|
 | `--scale-factor N`      | Set display scale (default: 20)  |
-| `--window-width W`      | Set window width                 |
-| `--window-height H`     | Set window height                |
+| `--window-width W`      | Set window width (default: 64)                |
+| `--window-height H`     | Set window height (default: 32)                |
 | `--insts-per-second N`  | Set CPU speed (default: 700)     |
 | `--square-wave-freq F`  | Set beep frequency (default: 440 Hz) |
 | `--volume V`           | Set audio volume (default: 3000) |
@@ -93,13 +86,10 @@ You can download sample CHIP-8 ROMs from:
 Debug mode provides:
 - Logging of CPU instructions
 - Display of memory state
-- Step-by-step execution (if enabled)
 
 ## Contributing
 Pull requests are welcome! If you find any issues or have suggestions, please open an issue on GitHub.
 
-## License
-This project is licensed under the MIT License. See `LICENSE` for details.
 
 ## Author
 [Adnan Adel](https://github.com/Adnan-Adel/chip8-emulator.git)
