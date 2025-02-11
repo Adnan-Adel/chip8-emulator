@@ -11,6 +11,7 @@
 #include <iostream>
 #include <string>
 #include <fstream>
+#include <iomanip>
 
 constexpr std::array<uint8_t, 80> FONTSET = {
     0xF0, 0x90, 0x90, 0x90, 0xF0,  // 0
@@ -188,261 +189,139 @@ void Chip8::handle_input(Config &config) {
 }
 #ifdef DEBUG
 void Chip8::print_debug_info() const {
-  printf("Address: 0x%04X, Opcode: 0x%04X, Desc: ",
-          PC-2, inst.opcode);
-  
-  switch((inst.opcode >> 12) & 0x0F) {
-    case 0x00:
-      if(inst.NN == 0xE0) {
-        // 0x00E0: Clear the screen
-        printf("Clear screen\n");
-      }
-      else if(inst.NN == 0xEE) {
-        // 0x00EE: Return from a subroutine
-        // set program counter to last address on subroutine stack
-        printf("Return from subroutine to address 0x%04X\n",
-                *(stack_ptr-1));
-      }
-    break;
-    
-    case 0x01:
-      // 0x1NNN: Jump to address NNN
-      printf("Jump to address NNN (0x%04X)\n",
-              inst.NNN);
-    break;
+    std::cout << std::hex << std::uppercase;
+    std::cout << "Address: 0x" << std::setw(4) << std::setfill('0') << (PC - 2)
+              << ", Opcode: 0x" << std::setw(4) << inst.opcode
+              << ", Desc: ";
 
-    case 0x02:
-      // 0x2NNN: Call subroutine at NNN
-      printf("Call subroutine at NNN (0x%04X)\n",
-              inst.NNN);
-    break;
-    
-    case 0x03:
-      // 0x3XNN: check if VX == NN, if so, skip the next instruction.
-      printf("check if v%x (0x%02x) == nn (0x%02x), skip next instruction if true\n",
-             inst.X, V[inst.X], inst.NN);
-    break;
-    
-    case 0x04:
-      // 0x4XNN: check if VX != NN, if so, skip the next instruction.
-      printf("Check if V%X (0x%02X) != NN (0x%02X), skip next instruction if true\n",
-             inst.X, V[inst.X], inst.NN);
-    break;
-    
-    case 0x05:
-      // 0x5XY0: Check if VX == VY, if so, skip the next instruction
-      printf("check if v%x (0x%02x) == V%x (0x%02x), skip next instruction if true\n",
-             inst.X, V[inst.Y], inst.Y, V[inst.Y]);
-    break;
-    
-    case 0x06:
-      // 0x6XNN: Set register VX to NN
-      printf("Set register V%X to NN (0x%02X)\n",
-              inst.X, inst.NN);
-      break;
+    switch ((inst.opcode >> 12) & 0x0F) {
+        case 0x00:
+            if (inst.NN == 0xE0) {
+                std::cout << "Clear screen\n";
+            } else if (inst.NN == 0xEE) {
+                std::cout << "Return from subroutine to address 0x"
+                          << std::setw(4) << *(stack_ptr - 1) << "\n";
+            }
+            break;
 
-    case 0x07:
-      // 0x7XNN: Set register VX += NN
-      printf("Set register V%X (0x%02X) += NN (0x%02X). Result: 0x%02X\n",
-              inst.X, V[inst.X], inst.NN,
-              V[inst.X] + inst.NN);
-    break;
-    
-    case 0x08:
-      switch(inst.N) {
-        case 0:
-          // 0x8XY0: Set register VX = VY
-          printf("Set register V%X = V%X (0x%02X)\n",
-                  inst.X, inst.Y, V[inst.Y]);
-        break;
+        case 0x01:
+            std::cout << "Jump to address NNN (0x" << std::setw(4) << inst.NNN << ")\n";
+            break;
 
-        case 1:
-          // 0x8XY1: Set register VX |= VY
-      printf("Set register V%X (0x%02X) |= V%X (0x%02X). Result: 0x%02X\n",
-              inst.X, V[inst.X],
-              inst.Y, V[inst.Y],
-              V[inst.X] | V[inst.Y]);
-        break;
-        
-        case 2:
-          // 0x8XY2: Set register VX &= VY
-      printf("Set register V%X (0x%02X) &= V%X (0x%02X). Result: 0x%02X\n",
-              inst.X, V[inst.X],
-              inst.Y, V[inst.Y],
-              V[inst.X] & V[inst.Y]);
-        break;
+        case 0x02:
+            std::cout << "Call subroutine at NNN (0x" << std::setw(4) << inst.NNN << ")\n";
+            break;
 
-        case 3:
-          // 0x8XY3: Set register VX ^= VY
-      printf("Set register V%X (0x%02X) ^= V%X (0x%02X). Result: 0x%02X\n",
-              inst.X, V[inst.X],
-              inst.Y, V[inst.Y],
-              V[inst.X] ^ V[inst.Y]);
-        break;
+        case 0x03:
+            std::cout << "Check if V" << std::hex << inst.X << " (0x" << int(V[inst.X])
+                      << ") == NN (0x" << int(inst.NN) << "), skip next if true\n";
+            break;
 
-        case 4:
-          // 0x8XY4: Set register VX += VY, set VF to 1 if carry
-      printf("Set register V%X (0x%02X) += V%X (0x%02X). VF = 1 if carry, Result: 0x%02X, VF = %X\n",
-              inst.X, V[inst.X],
-              inst.Y, V[inst.Y],
-              V[inst.X] + V[inst.Y],
-              ((uint16_t)(V[inst.X] + V[inst.Y]) > 255));
-        break;
+        case 0x04:
+            std::cout << "Check if V" << std::hex << inst.X << " (0x" << int(V[inst.X])
+                      << ") != NN (0x" << int(inst.NN) << "), skip next if true\n";
+            break;
 
-        case 5:
-          // 0x8XY5: Set register VX -= VY, Set VF to 1 if ther is not a borrow
-      printf("Set register V%X (0x%02X) -= V%X (0x%02X). VF = 1 if no borrow, Result: 0x%02X, VF = %X\n",
-              inst.X, V[inst.X],
-              inst.Y, V[inst.Y],
-              V[inst.X] - V[inst.Y],
-              (V[inst.Y] <= V[inst.X]));
-        break;
+        case 0x05:
+            std::cout << "Check if V" << std::hex << inst.X << " (0x" << int(V[inst.X])
+                      << ") == V" << int(inst.Y) << " (0x" << int(V[inst.Y])
+                      << "), skip next if true\n";
+            break;
 
-        case 6:
-          // 0x8XY6: Set register VX >>= 1, store shifted off bit in VF.
-      printf("Set register V%X (0x%02X) >>= 1. VF = 1 shifted off bit (%X), Result: 0x%02X\n",
-              inst.X, V[inst.X],
-              V[inst.X] & 1,
-              V[inst.X] >> 1);
-        break;
+        case 0x06:
+            std::cout << "Set V" << std::hex << inst.X << " = NN (0x"
+                      << int(inst.NN) << ")\n";
+            break;
 
-        case 7:
-          // 0x8XY7: Set register VX = VY - VX, Set VF to 1 if ther is not a borrow
-      printf("Set register V%X = V%X (0x%02X) - V%X (0x%02X). VF = 1 if no borrow, Result: 0x%02X, VF = %X\n",
-              inst.X,
-              inst.Y, V[inst.Y],
-              inst.X, V[inst.X],
-              V[inst.Y] - V[inst.X],
-              (V[inst.X] <= V[inst.Y]));
-        break;
-
-        case 0xE:
-          // 0x8XY6: Set register VX <<= 1, store shifted off bit in VF.
-      printf("Set register V%X (0x%02X) <<= 1. VF = 1 shifted off bit (%X), Result: 0x%02X\n",
-              inst.X, V[inst.X],
-              (V[inst.X] & 0x80) >> 7,
-              V[inst.X] << 1);
-        break;
-      }
-    break;
-    
-    case 0x09:
-      // 0x9XY0: Check if VX != VY, skip next instruction if so
-      printf("check if v%x (0x%02x) != V%x (0x%02x), skip next instruction if true\n",
-             inst.X, V[inst.Y], inst.Y, V[inst.Y]);
-    break;
-
-    case 0x0A:
-      // 0xANNN: Set index register I to NNN
-      printf("Set I to NNN (0x%04X)\n",
-              inst.NNN);
-    break;
-    
-    case 0x0B:
-      // 0xBNNN: Jump to address NNN + V0
-      printf("Set PC to NNN (0x%04X) + V0 (0x%02X). Result: PC = 0x%04X\n",
-              inst.NNN, V[0], inst.NNN + V[0]);
-    break;
-    
-    case 0x0C:
-      // 0xCXNN: Sets register VX = rand() % 256 & NN
-      printf("Set V%X = rand() %% 256 & NN (0x%02X)\n",
-              V[inst.X], inst.NN);
-    break;
-
-    case 0x0D:
-      // 0xDXYN: Draw N-height sprite at coords X,Y; Read from memory location I;
-      // Screen pixels are XOR'd with sprite bits,
-      // VF (carry flag) is set if any screen pixels are set off;
-      // this is useful for collision detection.
-      printf("Draw N (%u) height sprite at coords V%X (0x%02X), V%X (0x%02X) "
-             "from memory location I (0x%04X). Set VF = 1 if any pixels are turned off.\n",
-             inst.N, inst.X, V[inst.X], inst.Y,
-             V[inst.Y], I);
-    break;
-    
-    case 0x0E:
-      if(inst.NN == 0x9E) {
-        // 0xEX9E: Skip next instruction if key in VX is pressed
-        printf("Skip next instruction if key in V%X (0x%02X) is pressed. Keypad value: %d\n",
-                inst.X, V[inst.X],
-                keypad[V[inst.X]]);
-      }
-      else if(inst.NN == 0xA1) {
-        // 0xEXA1: Skip next instruction if key in VX is not pressed
-        printf("Skip next instruction if key in V%X (0x%02X) is not pressed. Keypad value: %d\n",
-                inst.X, V[inst.X],
-                keypad[V[inst.X]]);
-      }
-    break;
-    
-    case 0x0F:
-      switch(inst.NN) {
-        case 0x0A:
-          // 0xFX0A: get_key(); Await until a keypress, and store it in VX
-          printf("Await until a key is pressed; store key in V%X\n",
-                  inst.X);
-        break;
-        
-        case 0x1E:
-          // 0xFX1E: I += VX; Add VX to register I
-          printf("I (0x%04X) += V%X (0x%02X). Result (I): 0x%04X\n",
-                  I, inst.X, V[inst.X],
-                  I + V[inst.X]);
-        break;
-        
         case 0x07:
-          // 0xFX07: VX = delay timer
-          printf("Set V%X = delay timer value (0x%02X)\n",
-                  inst.X, delay_timer); 
-        break;
-        
-        case 0x15:
-          // 0xFX15: delay timer = VX
-          printf("Set delay timer value = V%X (0x%02X)\n",
-                  inst.X, V[inst.X]); 
-        break;
-        
-        case 0x18:
-          // 0xFX18: sound timer = VX
-          printf("Set sound timer value = V%X (0x%02X)\n",
-                  inst.X, V[inst.X]); 
-        break;
-        
-        case 0x29:
-          // 0xFX29: Set register I to sprite location in memory for character in VX (0x0 - 0xF)
-          printf("Set I to sprite location in memory for character in V%X (0x%02X). Result (V%X * 5) = (0x%02X)\n",
-                  inst.X, V[inst.X], inst.X, V[inst.X] * 5);
-        break;
-        
-        case 0x33:
-          // 0xFX33: Store BCD representation of VX at memory offset from I
-          // I = hundred's place, I+1 = ten's place, I+2 = one's place
-          printf("Store BCD representation V%X (0x%02X) at memory I (0x%04X)\n",
-                  inst.X, V[inst.X], I);
-        break;
-        
-        case 0x55:
-          // 0xFX55: Register dump V0 - VX inclusive to memory offset from I
-          printf("Register dump V0 - V%X (0x%02X) inclusive at memory from I (0x%04X)\n",
-                  inst.X, V[inst.X], I);
-        break;
-        
-        case 0x65:
-          // 0xFX65: Register load V0 - VX inclusive to memory offset from I
-          printf("Register load V0 - V%X (0x%02X) inclusive at memory from I (0x%04X)\n",
-                  inst.X, V[inst.X], I);
-        break;
+            std::cout << "Set V" << std::hex << inst.X << " += NN (0x" << int(inst.NN)
+                      << "), Result: 0x" << int(V[inst.X] + inst.NN) << "\n";
+            break;
+
+        case 0x08:
+            switch (inst.N) {
+                case 0:
+                    std::cout << "Set V" << std::hex << inst.X << " = V"
+                              << inst.Y << " (0x" << int(V[inst.Y]) << ")\n";
+                    break;
+                case 1:
+                    std::cout << "Set V" << std::hex << inst.X << " |= V"
+                              << inst.Y << " (0x" << int(V[inst.Y]) << "), Result: 0x"
+                              << int(V[inst.X] | V[inst.Y]) << "\n";
+                    break;
+                case 2:
+                    std::cout << "Set V" << std::hex << inst.X << " &= V"
+                              << inst.Y << " (0x" << int(V[inst.Y]) << "), Result: 0x"
+                              << int(V[inst.X] & V[inst.Y]) << "\n";
+                    break;
+                case 3:
+                    std::cout << "Set V" << std::hex << inst.X << " ^= V"
+                              << inst.Y << " (0x" << int(V[inst.Y]) << "), Result: 0x"
+                              << int(V[inst.X] ^ V[inst.Y]) << "\n";
+                    break;
+                case 4:
+                    std::cout << "Set V" << std::hex << inst.X << " += V"
+                              << inst.Y << " (0x" << int(V[inst.Y])
+                              << "), Carry: " << ((V[inst.X] + V[inst.Y]) > 255)
+                              << ", Result: 0x" << int(V[inst.X] + V[inst.Y]) << "\n";
+                    break;
+                case 5:
+                    std::cout << "Set V" << std::hex << inst.X << " -= V"
+                              << inst.Y << " (0x" << int(V[inst.Y])
+                              << "), Borrow: " << (V[inst.Y] > V[inst.X])
+                              << ", Result: 0x" << int(V[inst.X] - V[inst.Y]) << "\n";
+                    break;
+                case 6:
+                    std::cout << "Set V" << std::hex << inst.X << " >>= 1, VF = "
+                              << (V[inst.X] & 1) << ", Result: 0x"
+                              << int(V[inst.X] >> 1) << "\n";
+                    break;
+                case 7:
+                    std::cout << "Set V" << std::hex << inst.X << " = V"
+                              << inst.Y << " - V" << inst.X
+                              << ", Borrow: " << (V[inst.X] > V[inst.Y])
+                              << ", Result: 0x" << int(V[inst.Y] - V[inst.X]) << "\n";
+                    break;
+                case 0xE:
+                    std::cout << "Set V" << std::hex << inst.X << " <<= 1, VF = "
+                              << ((V[inst.X] & 0x80) >> 7)
+                              << ", Result: 0x" << int(V[inst.X] << 1) << "\n";
+                    break;
+            }
+            break;
+
+        case 0x09:
+            std::cout << "Check if V" << std::hex << inst.X << " (0x" << int(V[inst.X])
+                      << ") != V" << inst.Y << " (0x" << int(V[inst.Y])
+                      << "), skip next if true\n";
+            break;
+
+        case 0x0A:
+            std::cout << "Set I to NNN (0x" << std::setw(4) << inst.NNN << ")\n";
+            break;
+
+        case 0x0B:
+            std::cout << "Jump to NNN + V0 (0x" << inst.NNN << " + 0x" << int(V[0])
+                      << "), Result: 0x" << int(inst.NNN + V[0]) << "\n";
+            break;
+
+        case 0x0C:
+            std::cout << "Set V" << std::hex << inst.X << " = rand() % 256 & 0x"
+                      << int(inst.NN) << "\n";
+            break;
+
+        case 0x0D:
+            std::cout << "Draw N (" << int(inst.N) << ") height sprite at coords V"
+            << std::hex << inst.X << " (0x" << std::setw(2) << std::setfill('0') << int(V[inst.X]) << "), V"
+            << inst.Y << " (0x" << std::setw(2) << std::setfill('0') << int(V[inst.Y]) << ") "
+            << "from memory location I (0x" << std::setw(4) << std::setfill('0') << I << "). "
+            << "Set VF = 1 if any pixels are turned off.\n";
+            break;
 
         default:
-          break;  // Unimplemented
-      }
-    break;
-
-    default:
-      printf("Unimplemented opcode\n");
-    break;
-  }
+            std::cout << "Unknown opcode\n";
+            break;
+    }
 }
 #endif // DEBUG
 
