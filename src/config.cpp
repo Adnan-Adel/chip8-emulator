@@ -18,6 +18,7 @@ bool set_config_from_args(Config *config, int argc, char **argv) {
     .audio_sample_rate = 44100,   // CD quality, 44100 hz
     .volume = 3000,               
     .color_lerp_rate = 0.7,
+    .current_extension = CHIP8,
   };
 
  // Argument parsing
@@ -57,6 +58,9 @@ bool set_config_from_args(Config *config, int argc, char **argv) {
     }
     if (args.find("--color-lerp-rate") != args.end()) {
       config->color_lerp_rate = std::stof(args["--color-lerp-rate"]);
+    }
+    if (args.find("--current-extension") != args.end()) {
+      config->current_extension = (Extension)std::stoi(args["--current-extension"]);
     }
   } catch (const std::exception &e) {
     std::cerr << "Error parsing arguments: " << e.what() << std::endl;

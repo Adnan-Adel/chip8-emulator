@@ -465,6 +465,8 @@ void Chip8::emulate_instruction(const Config &config) {
   Chip8::print_debug_info(); 
 #endif // DEBUG
 
+  bool carry;
+  bool not_borrow;
   // Emulate opcode
   switch((inst.opcode >> 12) & 0x0F) {
     case 0x00:
@@ -534,47 +536,72 @@ void Chip8::emulate_instruction(const Config &config) {
         case 1:
           // 0x8XY1: Set register VX |= VY
           V[inst.X] |= V[inst.Y];
+          if(config.current_extension == CHIP8)
+            V[0xF] = 0;
         break;
         
         case 2:
           // 0x8XY2: Set register VX &= VY
           V[inst.X] &= V[inst.Y];
+          if(config.current_extension == CHIP8)
+            V[0xF] = 0;
         break;
 
         case 3:
           // 0x8XY3: Set register VX ^= VY
           V[inst.X] ^= V[inst.Y];
+          if(config.current_extension == CHIP8)
+            V[0xF] = 0;
         break;
 
         case 4:
           // 0x8XY4: Set register VX += VY, set VF to 1 if carry
-          V[0xF] = ((uint16_t)(V[inst.X] + V[inst.Y]) > 255);
+          carry = ((uint16_t)(V[inst.X] + V[inst.Y]) > 255);
 
           V[inst.X] += V[inst.Y];
+          V[0xF] = carry;
         break;
 
         case 5:
           // 0x8XY5: Set register VX -= VY, Set VF to 1 if ther is not a borrow
-          V[0xF] = (V[inst.Y] <= V[inst.X]);
+          not_borrow = (V[inst.Y] <= V[inst.X]);
+          
           V[inst.X] -= V[inst.Y];
+          V[0xF] = not_borrow;
         break;
 
         case 6:
           // 0x8XY6: Set register VX >>= 1, store shifted off bit in VF.
-          V[0xF] = V[inst.X] & 1;
-          V[inst.X] >>= 1;
+          if(config.current_extension == CHIP8) {
+            carry = V[inst.Y] & 1;
+            V[inst.X] = V[inst.Y] >> 1;
+          }
+          else {
+            carry = V[inst.X] & 1;
+            V[inst.X] >>= 1;
+          }
+          V[0xF] = carry;
         break;
 
         case 7:
           // 0x8XY7: Set register VX = VY - VX, Set VF to 1 if ther is not a borrow
-          V[0xF] = (V[inst.X] <= V[inst.Y]);
+          not_borrow = (V[inst.X] <= V[inst.Y]);
+          
           V[inst.X] = V[inst.Y] - V[inst.X];
+          V[0xF] = not_borrow;
         break;
 
         case 0xE:
           // 0x8XY6: Set register VX <<= 1, store shifted off bit in VF.
-          V[0xF] = (V[inst.X] & 0x80) >> 7;
-          V[inst.X] <<= 1;
+          if(config.current_extension == CHIP8) {
+            carry = (V[inst.Y] & 0x80) >> 7;
+            V[inst.X] = V[inst.Y] << 1;
+          }
+          else {
+            carry = (V[inst.X] & 0x80) >> 7;
+            V[inst.X] <<= 1;
+          }
+          V[0xF] = carry;
         break;
       }
     break;
@@ -659,10 +686,12 @@ void Chip8::emulate_instruction(const Config &config) {
       switch(inst.NN) {
         case 0x0A: {
           // 0xFX0A: get_key(); Await until a keypress, and store it in VX
-          bool any_key_pressed = false;
-          for(uint8_t i = 0; i < sizeof keypad; i++) {
+          static bool any_key_pressed = false;
+          static uint8_t key = 0xFF;
+
+          for(uint8_t i = 0; key == 0xFF && i < sizeof keypad; i++) {
             if(keypad[i]) {
-              V[inst.X] = i;
+              key = i;
               any_key_pressed = true;
               break;
             }
@@ -671,6 +700,17 @@ void Chip8::emulate_instruction(const Config &config) {
             // wait without running other instruction
             // (keep getting current opcode and running this instruction)
             PC -= 2;
+          }
+          else {
+            // A key has been pressed, wait until it is released to set it in VX
+            if(keypad[key])   // busy loop until key is released
+              PC -= 2;
+
+            else {
+              V[inst.X] = key;
+              key = 0xFF;
+              any_key_pressed = false;
+            }
           }
         break;
         }
@@ -715,14 +755,20 @@ void Chip8::emulate_instruction(const Config &config) {
         case 0x55:
           // 0xFX55: Register dump V0 - VX inclusive to memory offset from I
           for(uint8_t i = 0; i <= inst.X; i++) {
-            ram[I + i] = V[i];
+            if(config.current_extension == CHIP8)
+              ram[I++] = V[i];
+            else
+              ram[I + i] = V[i];
           }
         break;
         
         case 0x65:
           // 0xFX65: Register load V0 - VX inclusive to memory offset from I
           for(uint8_t i = 0; i <= inst.X; i++) {
-            V[i] = ram[I + i];
+            if(config.current_extension == CHIP8)
+              V[i] = ram[I++];
+            else
+              V[i] = ram[I + i];
           }
         break;
 
