@@ -250,7 +250,7 @@ void Chip8::print_debug_info() const {
 
     case 0x05:
         std::cout << "check if v" << std::hex << inst.X
-                  << " (0x" << fmt_02X(V[inst.Y])  // Note: Original code uses V[inst.Y] here
+                  << " (0x" << fmt_02X(V[inst.Y]) 
                   << ") == V" << inst.Y
                   << " (0x" << fmt_02X(V[inst.Y])
                   << "), skip next instruction if true\n";
@@ -336,7 +336,7 @@ void Chip8::print_debug_info() const {
 
     case 0x09:
         std::cout << "check if v" << std::hex << inst.X
-                  << " (0x" << fmt_02X(V[inst.Y])  // Original code uses V[inst.Y] here
+                  << " (0x" << fmt_02X(V[inst.Y])
                   << ") != V" << inst.Y
                   << " (0x" << fmt_02X(V[inst.Y])
                   << "), skip next instruction if true\n";
@@ -353,7 +353,7 @@ void Chip8::print_debug_info() const {
         break;
 
     case 0x0C:
-        std::cout << "Set V" << std::hex << static_cast<uint16_t>(V[inst.X])  // Original bug preserved
+        std::cout << "Set V" << std::hex << static_cast<uint16_t>(V[inst.X])
                   << " = rand() % 256 & NN (0x" << fmt_02X(inst.NN) << ")\n";
         break;
 
