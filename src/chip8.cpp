@@ -188,140 +188,247 @@ void Chip8::handle_input(Config &config) {
   }
 }
 #ifdef DEBUG
+#include <iostream>
+#include <iomanip>
+#include <string>
+
 void Chip8::print_debug_info() const {
-    std::cout << std::hex << std::uppercase;
-    std::cout << "Address: 0x" << std::setw(4) << std::setfill('0') << (PC - 2)
-              << ", Opcode: 0x" << std::setw(4) << inst.opcode
-              << ", Desc: ";
+  // Save original stream state
+  std::ios_base::fmtflags original_flags = std::cout.flags();
+  char original_fill = std::cout.fill();
 
-    switch ((inst.opcode >> 12) & 0x0F) {
-        case 0x00:
-            if (inst.NN == 0xE0) {
-                std::cout << "Clear screen\n";
-            } else if (inst.NN == 0xEE) {
-                std::cout << "Return from subroutine to address 0x"
-                          << std::setw(4) << *(stack_ptr - 1) << "\n";
-            }
-            break;
+  // Helper lambda for formatting 4-digit hex values
+  auto fmt_04X = [](uint16_t value) {
+    std::ostringstream oss;
+    oss << std::hex << std::uppercase << std::setw(4) << std::setfill('0') << value;
+    return oss.str();
+  };
 
-        case 0x01:
-            std::cout << "Jump to address NNN (0x" << std::setw(4) << inst.NNN << ")\n";
-            break;
+  // Helper lambda for formatting 2-digit hex values
+  auto fmt_02X = [](uint8_t value) {
+    std::ostringstream oss;
+    oss << std::hex << std::uppercase << std::setw(2) << std::setfill('0') 
+      << static_cast<uint16_t>(value);
+    return oss.str();
+  };
 
-        case 0x02:
-            std::cout << "Call subroutine at NNN (0x" << std::setw(4) << inst.NNN << ")\n";
-            break;
+  std::cout << "Address: 0x" << fmt_04X(PC - 2)
+            << ", Opcode: 0x" << fmt_04X(inst.opcode)
+            << ", Desc: ";
 
-        case 0x03:
-            std::cout << "Check if V" << std::hex << inst.X << " (0x" << int(V[inst.X])
-                      << ") == NN (0x" << int(inst.NN) << "), skip next if true\n";
-            break;
+  switch ((inst.opcode >> 12) & 0x0F) {
+    case 0x00:
+        if (inst.NN == 0xE0) {
+            std::cout << "Clear screen\n";
+        } else if (inst.NN == 0xEE) {
+            std::cout << "Return from subroutine to address 0x" 
+                      << fmt_04X(*(stack_ptr - 1)) << "\n";
+        }
+        break;
 
-        case 0x04:
-            std::cout << "Check if V" << std::hex << inst.X << " (0x" << int(V[inst.X])
-                      << ") != NN (0x" << int(inst.NN) << "), skip next if true\n";
-            break;
+    case 0x01:
+        std::cout << "Jump to address NNN (0x" << fmt_04X(inst.NNN) << ")\n";
+        break;
 
-        case 0x05:
-            std::cout << "Check if V" << std::hex << inst.X << " (0x" << int(V[inst.X])
-                      << ") == V" << int(inst.Y) << " (0x" << int(V[inst.Y])
-                      << "), skip next if true\n";
-            break;
+    case 0x02:
+        std::cout << "Call subroutine at NNN (0x" << fmt_04X(inst.NNN) << ")\n";
+        break;
 
-        case 0x06:
-            std::cout << "Set V" << std::hex << inst.X << " = NN (0x"
-                      << int(inst.NN) << ")\n";
-            break;
+    case 0x03:
+        std::cout << "check if v" << std::hex << inst.X
+                  << " (0x" << fmt_02X(V[inst.X])
+                  << ") == nn (0x" << fmt_02X(inst.NN)
+                  << "), skip next instruction if true\n";
+        break;
 
-        case 0x07:
-            std::cout << "Set V" << std::hex << inst.X << " += NN (0x" << int(inst.NN)
-                      << "), Result: 0x" << int(V[inst.X] + inst.NN) << "\n";
-            break;
+    case 0x04:
+        std::cout << "Check if V" << std::hex << inst.X
+                  << " (0x" << fmt_02X(V[inst.X])
+                  << ") != NN (0x" << fmt_02X(inst.NN)
+                  << "), skip next instruction if true\n";
+        break;
 
-        case 0x08:
-            switch (inst.N) {
-                case 0:
-                    std::cout << "Set V" << std::hex << inst.X << " = V"
-                              << inst.Y << " (0x" << int(V[inst.Y]) << ")\n";
-                    break;
-                case 1:
-                    std::cout << "Set V" << std::hex << inst.X << " |= V"
-                              << inst.Y << " (0x" << int(V[inst.Y]) << "), Result: 0x"
-                              << int(V[inst.X] | V[inst.Y]) << "\n";
-                    break;
-                case 2:
-                    std::cout << "Set V" << std::hex << inst.X << " &= V"
-                              << inst.Y << " (0x" << int(V[inst.Y]) << "), Result: 0x"
-                              << int(V[inst.X] & V[inst.Y]) << "\n";
-                    break;
-                case 3:
-                    std::cout << "Set V" << std::hex << inst.X << " ^= V"
-                              << inst.Y << " (0x" << int(V[inst.Y]) << "), Result: 0x"
-                              << int(V[inst.X] ^ V[inst.Y]) << "\n";
-                    break;
-                case 4:
-                    std::cout << "Set V" << std::hex << inst.X << " += V"
-                              << inst.Y << " (0x" << int(V[inst.Y])
-                              << "), Carry: " << ((V[inst.X] + V[inst.Y]) > 255)
-                              << ", Result: 0x" << int(V[inst.X] + V[inst.Y]) << "\n";
-                    break;
-                case 5:
-                    std::cout << "Set V" << std::hex << inst.X << " -= V"
-                              << inst.Y << " (0x" << int(V[inst.Y])
-                              << "), Borrow: " << (V[inst.Y] > V[inst.X])
-                              << ", Result: 0x" << int(V[inst.X] - V[inst.Y]) << "\n";
-                    break;
-                case 6:
-                    std::cout << "Set V" << std::hex << inst.X << " >>= 1, VF = "
-                              << (V[inst.X] & 1) << ", Result: 0x"
-                              << int(V[inst.X] >> 1) << "\n";
-                    break;
-                case 7:
-                    std::cout << "Set V" << std::hex << inst.X << " = V"
-                              << inst.Y << " - V" << inst.X
-                              << ", Borrow: " << (V[inst.X] > V[inst.Y])
-                              << ", Result: 0x" << int(V[inst.Y] - V[inst.X]) << "\n";
-                    break;
-                case 0xE:
-                    std::cout << "Set V" << std::hex << inst.X << " <<= 1, VF = "
-                              << ((V[inst.X] & 0x80) >> 7)
-                              << ", Result: 0x" << int(V[inst.X] << 1) << "\n";
-                    break;
-            }
-            break;
+    case 0x05:
+        std::cout << "check if v" << std::hex << inst.X
+                  << " (0x" << fmt_02X(V[inst.Y])  // Note: Original code uses V[inst.Y] here
+                  << ") == V" << inst.Y
+                  << " (0x" << fmt_02X(V[inst.Y])
+                  << "), skip next instruction if true\n";
+        break;
 
-        case 0x09:
-            std::cout << "Check if V" << std::hex << inst.X << " (0x" << int(V[inst.X])
-                      << ") != V" << inst.Y << " (0x" << int(V[inst.Y])
-                      << "), skip next if true\n";
-            break;
+    case 0x06:
+        std::cout << "Set register V" << std::hex << inst.X
+                  << " to NN (0x" << fmt_02X(inst.NN) << ")\n";
+        break;
 
-        case 0x0A:
-            std::cout << "Set I to NNN (0x" << std::setw(4) << inst.NNN << ")\n";
-            break;
+    case 0x07:
+        std::cout << "Set register V" << std::hex << inst.X
+                  << " (0x" << fmt_02X(V[inst.X])
+                  << ") += NN (0x" << fmt_02X(inst.NN)
+                  << "). Result: 0x" << fmt_02X(V[inst.X] + inst.NN) << "\n";
+        break;
 
-        case 0x0B:
-            std::cout << "Jump to NNN + V0 (0x" << inst.NNN << " + 0x" << int(V[0])
-                      << "), Result: 0x" << int(inst.NNN + V[0]) << "\n";
-            break;
+    case 0x08:
+        switch (inst.N) {
+            case 0:
+                std::cout << "Set register V" << inst.X
+                          << " = V" << inst.Y
+                          << " (0x" << fmt_02X(V[inst.Y]) << ")\n";
+                break;
+            case 1:
+                std::cout << "Set register V" << inst.X
+                          << " (0x" << fmt_02X(V[inst.X])
+                          << ") |= V" << inst.Y
+                          << " (0x" << fmt_02X(V[inst.Y])
+                          << "). Result: 0x" << fmt_02X(V[inst.X] | V[inst.Y]) << "\n";
+                break;
+            case 2:
+                std::cout << "Set register V" << inst.X
+                          << " (0x" << fmt_02X(V[inst.X])
+                          << ") &= V" << inst.Y
+                          << " (0x" << fmt_02X(V[inst.Y])
+                          << "). Result: 0x" << fmt_02X(V[inst.X] & V[inst.Y]) << "\n";
+                break;
+            case 3:
+                std::cout << "Set register V" << inst.X
+                          << " (0x" << fmt_02X(V[inst.X])
+                          << ") ^= V" << inst.Y
+                          << " (0x" << fmt_02X(V[inst.Y])
+                          << "). Result: 0x" << fmt_02X(V[inst.X] ^ V[inst.Y]) << "\n";
+                break;
+            case 4:
+                std::cout << "Set register V" << inst.X
+                          << " (0x" << fmt_02X(V[inst.X])
+                          << ") += V" << inst.Y
+                          << " (0x" << fmt_02X(V[inst.Y])
+                          << "). VF = 1 if carry, Result: 0x" << fmt_02X(V[inst.X] + V[inst.Y])
+                          << ", VF = " << ((uint16_t)(V[inst.X] + V[inst.Y]) > 255) << "\n";
+                break;
+            case 5:
+                std::cout << "Set register V" << inst.X
+                          << " (0x" << fmt_02X(V[inst.X])
+                          << ") -= V" << inst.Y
+                          << " (0x" << fmt_02X(V[inst.Y])
+                          << "). VF = 1 if no borrow, Result: 0x" << fmt_02X(V[inst.X] - V[inst.Y])
+                          << ", VF = " << (V[inst.Y] <= V[inst.X]) << "\n";
+                break;
+            case 6:
+                std::cout << "Set register V" << inst.X
+                          << " (0x" << fmt_02X(V[inst.X])
+                          << ") >>= 1. VF = 1 shifted off bit (" << (V[inst.X] & 1)
+                          << "), Result: 0x" << fmt_02X(V[inst.X] >> 1) << "\n";
+                break;
+            case 7:
+                std::cout << "Set register V" << inst.X
+                          << " = V" << inst.Y << " (0x" << fmt_02X(V[inst.Y])
+                          << ") - V" << inst.X << " (0x" << fmt_02X(V[inst.X])
+                          << "). VF = 1 if no borrow, Result: 0x" << fmt_02X(V[inst.Y] - V[inst.X])
+                          << ", VF = " << (V[inst.X] <= V[inst.Y]) << "\n";
+                break;
+            case 0xE:
+                std::cout << "Set register V" << inst.X
+                          << " (0x" << fmt_02X(V[inst.X])
+                          << ") <<= 1. VF = 1 shifted off bit (" << ((V[inst.X] & 0x80) >> 7)
+                          << "), Result: 0x" << fmt_02X(V[inst.X] << 1) << "\n";
+                break;
+        }
+        break;
 
-        case 0x0C:
-            std::cout << "Set V" << std::hex << inst.X << " = rand() % 256 & 0x"
-                      << int(inst.NN) << "\n";
-            break;
+    case 0x09:
+        std::cout << "check if v" << std::hex << inst.X
+                  << " (0x" << fmt_02X(V[inst.Y])  // Original code uses V[inst.Y] here
+                  << ") != V" << inst.Y
+                  << " (0x" << fmt_02X(V[inst.Y])
+                  << "), skip next instruction if true\n";
+        break;
 
-        case 0x0D:
-            std::cout << "Draw N (" << int(inst.N) << ") height sprite at coords V"
-            << std::hex << inst.X << " (0x" << std::setw(2) << std::setfill('0') << int(V[inst.X]) << "), V"
-            << inst.Y << " (0x" << std::setw(2) << std::setfill('0') << int(V[inst.Y]) << ") "
-            << "from memory location I (0x" << std::setw(4) << std::setfill('0') << I << "). "
-            << "Set VF = 1 if any pixels are turned off.\n";
-            break;
+    case 0x0A:
+        std::cout << "Set I to NNN (0x" << fmt_04X(inst.NNN) << ")\n";
+        break;
 
-        default:
-            std::cout << "Unknown opcode\n";
-            break;
-    }
+    case 0x0B:
+        std::cout << "Set PC to NNN (0x" << fmt_04X(inst.NNN)
+                  << ") + V0 (0x" << fmt_02X(V[0])
+                  << "). Result: PC = 0x" << fmt_04X(inst.NNN + V[0]) << "\n";
+        break;
+
+    case 0x0C:
+        std::cout << "Set V" << std::hex << static_cast<uint16_t>(V[inst.X])  // Original bug preserved
+                  << " = rand() % 256 & NN (0x" << fmt_02X(inst.NN) << ")\n";
+        break;
+
+    case 0x0D:
+        std::cout << "Draw N (" << std::dec << static_cast<unsigned>(inst.N)
+                  << ") height sprite at coords V" << std::hex << inst.X
+                  << " (0x" << fmt_02X(V[inst.X]) << "), V" << inst.Y
+                  << " (0x" << fmt_02X(V[inst.Y]) << ") "
+                  << "from memory location I (0x" << fmt_04X(I)
+                  << "). Set VF = 1 if any pixels are turned off.\n";
+        break;
+
+    case 0x0E:
+      if (inst.NN == 0x9E) {
+          std::cout << "Skip next instruction if key in V" << std::hex << inst.X
+                    << " (0x" << fmt_02X(V[inst.X]) << ") is pressed. Keypad value: "
+                    << std::dec << static_cast<int>(keypad[V[inst.X]]) << "\n";
+      } else if (inst.NN == 0xA1) {
+          std::cout << "Skip next instruction if key in V" << std::hex << inst.X
+                    << " (0x" << fmt_02X(V[inst.X]) << ") is not pressed. Keypad value: "
+                    << std::dec << static_cast<int>(keypad[V[inst.X]]) << "\n";
+      }
+      break;
+
+    case 0x0F:
+      switch (inst.NN) {
+          case 0x0A:
+              std::cout << "Await until a key is pressed; store key in V" << std::hex << inst.X << "\n";
+              break;
+          case 0x1E:
+              std::cout << "I (0x" << fmt_04X(I)
+                        << ") += V" << inst.X
+                        << " (0x" << fmt_02X(V[inst.X])
+                        << "). Result (I): 0x" << fmt_04X(I + V[inst.X]) << "\n";
+              break;
+          case 0x07:
+              std::cout << "Set V" << std::hex << inst.X
+                        << " = delay timer value (0x" << fmt_02X(delay_timer) << ")\n";
+              break;
+          case 0x15:
+              std::cout << "Set delay timer value = V" << std::hex << inst.X
+                        << " (0x" << fmt_02X(V[inst.X]) << ")\n";
+              break;
+          case 0x18:
+              std::cout << "Set sound timer value = V" << std::hex << inst.X
+                        << " (0x" << fmt_02X(V[inst.X]) << ")\n";
+              break;
+          case 0x29:
+              std::cout << "Set I to sprite location in memory for character in V" << std::hex << inst.X
+                        << " (0x" << fmt_02X(V[inst.X]) << "). Result (V" << inst.X
+                        << " * 5) = (0x" << fmt_02X(V[inst.X] * 5) << ")\n";
+              break;
+          case 0x33:
+              std::cout << "Store BCD representation V" << std::hex << inst.X
+                        << " (0x" << fmt_02X(V[inst.X]) << ") at memory I (0x" << fmt_04X(I) << ")\n";
+              break;
+          case 0x55:
+              std::cout << "Register dump V0 - V" << std::hex << inst.X
+                        << " (0x" << fmt_02X(V[inst.X]) << ") inclusive at memory from I (0x" << fmt_04X(I) << ")\n";
+              break;
+          case 0x65:
+              std::cout << "Register load V0 - V" << std::hex << inst.X
+                        << " (0x" << fmt_02X(V[inst.X]) << ") inclusive at memory from I (0x" << fmt_04X(I) << ")\n";
+              break;
+      }
+        break;
+
+    default:
+      std::cout << "Unimplemented opcode\n";
+      break;
+  }
+
+  // Restore original stream state
+  std::cout.flags(original_flags);
+  std::cout.fill(original_fill);
 }
 #endif // DEBUG
 
