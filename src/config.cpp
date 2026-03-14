@@ -1,4 +1,4 @@
-#include "../include/config.h"
+#include "../include/config.hpp"
 #include <iostream>
 #include <string>
 #include <unordered_map>

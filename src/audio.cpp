@@ -1,66 +1,69 @@
-#include "../include/audio.h"
+#include "../include/audio.hpp"
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_audio.h>
 #include <cstdint>
+#include <iostream>
 
-Audio::Audio(Config &config) {
-  if(SDL_Init(SDL_INIT_AUDIO) != 0) {
-    SDL_Log("Could not initialize SDL AUDIO! %s\n", SDL_GetError());
-    return;
-  }
-  
-  want.freq = 44100;         // CD-quality audio (44.1 kHz)
-  want.format = AUDIO_S16LSB; // 16-bit signed samples, little-endian
-  want.channels = 1;         // Mono
-  want.samples = 512;
-  want.callback = MyAudioCallback;
-  want.userdata = &config;   // Can pass an object reference later
-  
-  // Open audio device
-  dev = SDL_OpenAudioDevice(nullptr, 0, &want, &have, 0);
-  if(dev == 0) {
-    SDL_Log("Could not get an audio device! %s\n", SDL_GetError());
-  }
-  
-  // Check if requested format was granted
-  if((want.format != have.format) ||
-     (want.channels != have.channels)) {
-    SDL_Log("Could not get desired audio spec! %s\n", SDL_GetError());
-  }
+Audio::Audio(const Config &config) {
+    if (SDL_Init(SDL_INIT_AUDIO) != 0) {
+        std::cerr << "Could not initialize SDL audio: " << SDL_GetError() << '\n';
+        return;
+    }
+
+    want_.freq = static_cast<int>(config.audio_sample_rate);
+    want_.format = AUDIO_S16LSB;
+    want_.channels = 1;
+    want_.samples = 512;
+    want_.callback = audioCallback;
+    want_.userdata =
+        const_cast<Config *>(&config); // config lifetime outlives Audio
+
+    // Open audio device
+    dev_ = SDL_OpenAudioDevice(nullptr, 0, &want_, &have_, 0);
+    if (dev_ == 0) {
+        std::cerr << "Could not open audio device: " << SDL_GetError() << '\n';
+        return;
+    }
+
+    if (want_.format != have_.format || want_.channels != have_.channels) {
+        std::cerr << "Audio device did not grant requested format.\n";
+    }
 }
 
 Audio::~Audio() {
-  if (dev) {
-    SDL_CloseAudioDevice(dev);
-  }
-  SDL_Quit();
+    if (dev_) {
+        SDL_CloseAudioDevice(dev_);
+    }
+    SDL_Quit();
 }
 
-void Audio::MyAudioCallback(void *userdata, Uint8 *stream, int len) {
-  Config *config = (Config *)userdata;
-  
-  int16_t *audio_data = (int16_t *)stream;
-  static uint32_t running_sample_index = 0;
-  const int32_t square_wave_period = config->audio_sample_rate / config->square_wave_freq;
-  const int32_t half_square_wave_period = square_wave_period / 2;
-  
-  for(int i = 0; i < len / 2; i++) {
-    audio_data[i] = ((running_sample_index++ / half_square_wave_period) % 2) ? 
-                    config->volume : -config->volume;
-  }
+void Audio::audioCallback(void *userdata, Uint8 *stream, int len) {
+    const Config *config = static_cast<const Config *>(userdata);
 
+    auto *audio_data = reinterpret_cast<int16_t *>(stream);
+    static uint32_t running_sample_index = 0;
+
+    const int32_t period = static_cast<int32_t>(config->audio_sample_rate /
+                                                config->square_wave_freq);
+    const int32_t half_period = period / 2;
+
+    const int sample_count = len / 2;
+    for (int i = 0; i < sample_count; ++i) {
+        audio_data[i] = ((running_sample_index++ / half_period) % 2)
+                            ? config->volume
+                            : static_cast<int16_t>(-config->volume);
+    }
 }
 
 void Audio::play() {
-  if (dev) {
-    SDL_PauseAudioDevice(dev, 0); // Unpause audio
-  }
+    if (dev_) {
+        SDL_PauseAudioDevice(dev_, 0); // Unpause audio
+    }
 }
 
 // stop function
 void Audio::stop() {
-  if (dev) {
-    SDL_PauseAudioDevice(dev, 1); // Pause audio
-  }
+    if (dev_) {
+        SDL_PauseAudioDevice(dev_, 1); // Pause audio
+    }
 }
-
